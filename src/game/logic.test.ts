@@ -184,3 +184,66 @@ test('NPC definitions and Quests are properly linked', () => {
   const chloe = NPCS.find((n) => n.id === 'chloe');
   assert.ok(chloe, 'Mechanic Chloe must be defined');
 });
+
+test('City skyscrapers and building collision detection work accurately', async () => {
+  const { BUILDINGS, getBuildingAt, findWebSwingAnchor } = await import('./cityData.ts');
+  assert.ok(BUILDINGS.length >= 10, 'Must have at least 10 tall skyscrapers');
+
+  // Stark Tower is at (0, -35) with height 165m
+  const starkTower = getBuildingAt(0, -35);
+  assert.ok(starkTower !== null, 'Should detect Stark Tower at (0, -35)');
+  assert.equal(starkTower?.name, 'Stark Metropolis Tower');
+  assert.ok(starkTower!.height >= 150, 'Stark Tower should be at least 150m tall');
+
+  // Open street at (0, 0) has no building
+  const openStreet = getBuildingAt(0, 0);
+  assert.equal(openStreet, null, 'Center intersection (0, 0) should be open street');
+
+  // Web swing anchor search finds tall skyscraper facing player
+  const anchor = findWebSwingAnchor(0, 20, 0, 0, -1, 85);
+  assert.ok(anchor !== null, 'Should find high anchor point on nearby skyscraper');
+  assert.ok(anchor!.y > 30, 'Anchor must be high up the building for swinging');
+});
+
+test('Spider-Man combat combos, web shots, and spider-sense dodge work correctly', async () => {
+  const { INITIAL_COMBAT_STATE, executeMeleeAttack, executeWebShoot, executeSpiderSenseDodge } = await import('./combat.ts');
+  type ThugType = import('./combat.ts').ThugEntity;
+  const combatState = { ...INITIAL_COMBAT_STATE };
+
+  const testThug: ThugType = {
+    id: 'test_thug_1',
+    name: 'Syndicate Enforcer',
+    x: 2.0,
+    y: 0,
+    z: 0,
+    yaw: 0,
+    health: 100,
+    maxHealth: 100,
+    state: 'idle',
+    attackTimer: 0,
+    webbedTimer: 0,
+    hurtTimer: 0,
+  };
+
+  // 1. Melee attack hit test
+  const hitResult = executeMeleeAttack([testThug], 0, 0, 0, 0, combatState);
+  assert.ok(hitResult.hitThug !== null, 'Should hit the thug in melee range');
+  assert.ok(hitResult.damage > 0, 'Damage must be greater than zero');
+  assert.equal(combatState.comboCount, 1, 'Combo count should increment to 1');
+  assert.ok(testThug.health < 100, 'Thug health must decrease after hit');
+
+  // 2. Web shooter immobilize
+  const webResult = executeWebShoot([testThug], 0, 0, 0, 0, combatState);
+  assert.ok(webResult.targetThug !== null, 'Should immobilize thug with web shooter');
+  assert.equal(testThug.state, 'webbed', 'Thug state must transition to webbed');
+  assert.ok(testThug.webbedTimer > 0, 'Webbed timer must be active');
+
+  // 3. Spider-sense dodge reflex
+  testThug.state = 'windup';
+  combatState.spiderSenseActive = true;
+  combatState.spiderSenseSourceId = testThug.id;
+  const dodgeResult = executeSpiderSenseDodge(combatState, [testThug], 0, 0, 0);
+  assert.equal(dodgeResult.isPerfectDodge, true, 'Should execute perfect spider-sense dodge');
+  assert.equal(combatState.spiderSenseActive, false, 'Spider-sense should clear after dodge');
+});
+
