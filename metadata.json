@@ -1,0 +1,7 @@
+{
+  "name": "Horizon Overland: 3D Procedural World",
+  "description": "An open world 3D adventure featuring procedurally generated terrain, realistic dynamic weather systems, a drivable physics vehicle, and interactive NPCs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
